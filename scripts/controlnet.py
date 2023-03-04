@@ -66,7 +66,7 @@ reverse_symbol = '\U000021C4'       # ⇄
 webcam_enabled = False
 webcam_mirrored = False
 
-PARAM_COUNT = 15
+PARAM_COUNT = 16
 
 
 class ToolButton(gr.Button, gr.components.FormComponent):
@@ -231,6 +231,7 @@ class Script(scripts.Script):
             rgbbgr_mode = gr.Checkbox(label='RGB to BGR', value=False)
             lowvram = gr.Checkbox(label='Low VRAM', value=False)
             guess_mode = gr.Checkbox(label='Guess Mode', value=False)
+            show_map_output = gr.Checkbox(label='Show Map in Output', value=True)
 
         ctrls += (enabled,)
         # infotext_fields.append((enabled, "ControlNet Enabled"))
@@ -395,7 +396,7 @@ class Script(scripts.Script):
                                                 
         ctrls += (input_image, scribble_mode, resize_mode, rgbbgr_mode)
         ctrls += (lowvram,)
-        ctrls += (processor_res, threshold_a, threshold_b, guidance_start, guidance_end, guess_mode)
+        ctrls += (processor_res, threshold_a, threshold_b, guidance_start, guidance_end, guess_mode, show_map_output)
             
         input_image.orgpreprocess=input_image.preprocess
         input_image.preprocess=svgPreprocess
@@ -430,7 +431,7 @@ class Script(scripts.Script):
             
     def register_modules(self, tabname, params):
         enabled, module, model, weight = params[:4]
-        guidance_start, guidance_end, guess_mode = params[-3:]
+        guidance_start, guidance_end, guess_mode, show_map_output = params[-4:]
         
         self.infotext_fields.extend([
             (enabled, f"{tabname} Enabled"),
@@ -504,7 +505,7 @@ class Script(scripts.Script):
             params = [None] * PARAM_COUNT
 
         enabled, module, model, weight, image, scribble_mode, \
-            resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode = params
+            resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode, show_map_output = params
 
         selector = self.get_remote_call
 
@@ -524,6 +525,7 @@ class Script(scripts.Script):
         guidance_start = selector(p, "control_net_guidance_start", guidance_start, idx)
         guidance_end = selector(p, "control_net_guidance_end", guidance_end, idx)
         guess_mode = selector(p, "control_net_guess_mode", guess_mode, idx)
+        show_map_output = selector(p, "control_net_show_map_output", show_map_output, idx)
         if guidance_strength < 1.0:
             # for backward compatible
             guidance_end = guidance_strength
@@ -531,7 +533,7 @@ class Script(scripts.Script):
         input_image = selector(p, "control_net_input_image", None, idx)
 
         return (enabled, module, model, weight, image, scribble_mode, \
-            resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode), input_image
+            resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode, show_map_output), input_image
 
     def process(self, p, is_img2img=False, *args):
         """
@@ -555,7 +557,7 @@ class Script(scripts.Script):
         for idx, params in enumerate(params_group):
             params, _ = self.parse_remote_call(p, params, idx)
             enabled, module, model, weight, image, scribble_mode, \
-                resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode = params
+                resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode, show_map_output = params
 
             if not enabled:
                 continue
@@ -603,7 +605,7 @@ class Script(scripts.Script):
             module, model, params = contents
             _, input_image = self.parse_remote_call(p, params, idx)
             enabled, module, model, weight, image, scribble_mode, \
-                resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode = params
+                resize_mode, rgbbgr_mode, lowvram, pres, pthr_a, pthr_b, guidance_start, guidance_end, guess_mode, show_map_output = params
                 
             if lowvram:
                 hook_lowvram = True
@@ -714,7 +716,7 @@ class Script(scripts.Script):
         if self.latest_network is None or no_detectmap_opt or is_img2img_batch_tab:
             return
 
-        if hasattr(self, "detected_map") and self.detected_map is not None:
+        if hasattr(self, "show_map_output") and self.show_map_output and hasattr(self, "detected_map") and self.detected_map is not None:
             for detect_map, module in self.detected_map:
                 if module in ["canny", "mlsd", "scribble", "fake_scribble", "pidinet"]:
                     detect_map = 255-detect_map

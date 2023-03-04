@@ -51,6 +51,7 @@ cn_fields = {
     "guidance_start": (float, Field(0.0, title='ControlNet Guidance Start')),
     "guidance_end": (float, Field(1.0, title='ControlNet Guidance End')),
     "guessmode": (bool, Field(default=True, title="Guess Mode")),
+    "show_map_output": (bool, Field(default=True, title="Show map in output")),
 }
 
 def get_deprecated_cn_field(field_name: str, field):
@@ -240,7 +241,8 @@ def create_cn_unit_args(unit_request: ControlNetUnitRequest):
         unit_request.threshold_b,
         unit_request.guidance_start,
         unit_request.guidance_end,
-        unit_request.guessmode
+        unit_request.guessmode,
+        unit_request.show_map_output
     )
 
 def warn_deprecated_cn_params():
